@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="theme-color" content="#0f0e17"/>
+<title>Mock Quiz</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Source+Code+Pro:wght@400;600&family=Lora:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root{--bg:#0f0e17;--card:#1a1828;--card2:#201e30;--accent:#e8c547;--text:#fffffe;--muted:#a7a9be;--correct:#4caf82;--wrong:#e05c5c;--border:#2e2c3e}
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:'Lora',serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:32px 16px 64px}
+  .wrap{width:100%;max-width:660px}
+  header{text-align:center;margin-bottom:40px;animation:fadeDown .6s ease both}
+  header h1{font-family:'Playfair Display',serif;font-size:clamp(30px,8vw,52px);color:var(--accent);letter-spacing:.04em;line-height:1;margin-bottom:10px}
+  header p{font-family:'Source Code Pro',monospace;font-size:12px;color:var(--muted);letter-spacing:.18em;text-transform:uppercase}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:32px 28px;animation:fadeUp .5s ease both}
+  .upload-zone{border:2px dashed var(--border);border-radius:14px;padding:52px 24px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;margin-bottom:24px}
+  .upload-zone:hover,.upload-zone.drag{border-color:var(--accent);background:rgba(232,197,71,.04)}
+  .upload-zone .icon{font-size:44px;margin-bottom:14px}
+  .upload-zone h2{font-size:17px;font-weight:500;margin-bottom:8px}
+  .upload-zone span{font-family:'Source Code Pro',monospace;font-size:12px;color:var(--muted)}
+  #fileInput{display:none}
+  .hint{font-family:'Source Code Pro',monospace;font-size:12px;color:var(--muted);text-align:center}
+  .btn{display:block;width:100%;background:var(--accent);color:var(--bg);border:none;border-radius:10px;padding:14px 24px;font-size:15px;font-family:'Playfair Display',serif;font-weight:700;letter-spacing:.06em;cursor:pointer;transition:opacity .2s,transform .1s;margin-top:16px}
+  .btn:hover{opacity:.87}.btn:active{transform:scale(.98)}
+  .btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:10px;padding:12px 20px;font-size:13px;font-family:'Source Code Pro',monospace;cursor:pointer;transition:opacity .2s;letter-spacing:.06em}
+  .btn-ghost:hover{opacity:.7}
+  .progress-bar{height:3px;background:var(--border);border-radius:2px;margin-bottom:28px;overflow:hidden}
+  .progress-fill{height:100%;background:var(--accent);border-radius:2px;transition:width .5s cubic-bezier(.4,0,.2,1)}
+  .q-meta{font-family:'Source Code Pro',monospace;font-size:11px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-bottom:12px;display:flex;justify-content:space-between}
+  .q-text{font-size:17px;line-height:1.7;margin-bottom:28px}
+  .option{display:block;width:100%;text-align:left;background:transparent;border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-bottom:12px;color:var(--text);font-size:15px;font-family:'Lora',serif;line-height:1.5;cursor:pointer;transition:border-color .2s,background .2s}
+  .option:hover:not([disabled]){border-color:var(--accent);background:rgba(232,197,71,.04)}
+  .option[disabled]{cursor:default}
+  .option.correct{border-color:var(--correct);background:rgba(76,175,130,.1)}
+  .option.wrong{border-color:var(--wrong);background:rgba(224,92,92,.1)}
+  .option.reveal{border-color:var(--correct);background:rgba(76,175,130,.07)}
+  .feedback{padding:13px 16px;border-radius:10px;font-family:'Source Code Pro',monospace;font-size:13px;margin-bottom:20px;letter-spacing:.04em}
+  .feedback.ok{background:rgba(76,175,130,.12);border:1px solid var(--correct);color:var(--correct)}
+  .feedback.no{background:rgba(224,92,92,.12);border:1px solid var(--wrong);color:var(--wrong)}
+  .result-center{text-align:center}
+  .score-big{font-family:'Playfair Display',serif;font-size:76px;color:var(--accent);line-height:1;margin-bottom:6px}
+  .score-label{font-family:'Source Code Pro',monospace;font-size:11px;color:var(--muted);letter-spacing:.18em;text-transform:uppercase;margin-bottom:32px}
+  .stats{display:flex;justify-content:center;gap:32px;margin-bottom:32px}
+  .stat-val{font-family:'Playfair Display',serif;font-size:28px;margin-bottom:4px}
+  .stat-lbl{font-family:'Source Code Pro',monospace;font-size:10px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase}
+  .result-msg{font-size:15px;color:var(--muted);margin-bottom:24px}
+  .review-list{margin:16px 0;text-align:left;max-height:420px;overflow-y:auto}
+  .review-item{border-left:3px solid var(--border);padding:12px 16px;margin-bottom:8px;border-radius:0 8px 8px 0;background:var(--card2);font-size:14px;line-height:1.6}
+  .review-item.ok{border-color:var(--correct)}.review-item.no{border-color:var(--wrong)}
+  .review-item .ri-q{color:var(--text);margin-bottom:4px}
+  .review-item .ri-a{font-family:'Source Code Pro',monospace;font-size:12px;color:var(--muted)}
+  .divider{border:none;border-top:1px solid var(--border);margin:24px 0}
+  .loader{display:flex;flex-direction:column;align-items:center;gap:16px;padding:52px 0}
+  .spinner{width:38px;height:38px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .75s linear infinite}
+  .loader-title{font-family:'Source Code Pro',monospace;font-size:14px;color:var(--text);letter-spacing:.08em;text-align:center}
+  .loader-sub{font-family:'Source Code Pro',monospace;font-size:12px;color:var(--muted);letter-spacing:.06em;text-align:center;line-height:2}
+  .chunk-bar{width:260px;height:6px;background:var(--border);border-radius:3px;overflow:hidden}
+  .chunk-fill{height:100%;background:var(--accent);border-radius:3px;transition:width .4s ease}
+  .error{background:rgba(224,92,92,.1);border:1px solid var(--wrong);border-radius:10px;padding:14px 18px;color:var(--wrong);font-family:'Source Code Pro',monospace;font-size:13px;margin-bottom:20px}
+  .controls{display:flex;gap:10px;align-items:stretch;margin-top:4px}
+  .controls .btn{margin-top:0;flex:1}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+  @keyframes fadeDown{from{opacity:0;transform:translateY(-14px)}to{opacity:1;transform:none}}
+  @media(max-width:480px){.card{padding:22px 16px}.stats{gap:18px}.score-big{font-size:60px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Mock Quiz</h1>
+    <p>Upload PDF &bull; AI Extract &bull; Test Yourself</p>
+  </header>
+  <div class="card" id="app"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+const GEMINI_KEY = 'AIzaSyD6FpvD0_oXSWtF5LjMVfyYHHNYr-SACfI';
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`;
+const PAGES_PER_CHUNK = 15; // 15 pages per API call = handles 1000+ questions fine
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+const S = {
+  phase: 'upload',
+  questions: [], current: 0, selected: null, answers: [],
+  error: '', chunkDone: 0, chunkTotal: 0, loadingMsg: ''
+};
+
+// ── Render ──────────────────────────────────────────────────
+function render() {
+  document.getElementById('app').innerHTML =
+    ({upload:renderUpload, loading:renderLoading, quiz:renderQuiz, result:renderResult})[S.phase]();
+  bindEvents();
+}
+
+function renderUpload() {
+  return `
+    ${S.error ? `<div class="error">⚠ ${esc(S.error)}</div>` : ''}
+    <div class="upload-zone" id="uploadZone">
+      <div class="icon">📄</div>
+      <h2>Drop your MCQ PDF here</h2>
+      <span>supports 1000+ questions &bull; any layout</span>
+      <input type="file" id="fileInput" accept=".pdf"/>
+    </div>
+    <p class="hint">Gemini AI reads every page and extracts all questions</p>`;
+}
+
+function renderLoading() {
+  const pct = S.chunkTotal ? Math.round((S.chunkDone / S.chunkTotal) * 100) : 0;
+  return `
+    <div class="loader">
+      <div class="spinner"></div>
+      <div class="loader-title">${esc(S.loadingMsg)}</div>
+      ${S.chunkTotal > 0 ? `
+        <div class="chunk-bar"><div class="chunk-fill" style="width:${pct}%"></div></div>
+        <div class="loader-sub">
+          Chunk ${S.chunkDone} / ${S.chunkTotal} &nbsp;·&nbsp; ${S.questions.length} questions found
+        </div>` : '<div class="loader-sub">Reading PDF pages…</div>'}
+    </div>`;
+}
+
+function renderQuiz() {
+  const q = S.questions[S.current];
+  const pct = (S.current / S.questions.length) * 100;
+  const correct = (q.answer || '').trim().toUpperCase();
+  const sel = S.selected;
+  function cls(l) {
+    if (!sel) return '';
+    const L = l.trim().toUpperCase();
+    if (L === correct && L === sel) return 'correct';
+    if (L === sel) return 'wrong';
+    if (L === correct) return 'reveal';
+    return '';
+  }
+  const opts = (q.options || []).map(o => {
+    const l = o.trim().charAt(0).toUpperCase();
+    return `<button class="option ${cls(l)}" data-letter="${l}" ${sel?'disabled':''}>${esc(o)}</button>`;
+  }).join('');
+  const fb = sel
+    ? `<div class="feedback ${sel===correct?'ok':'no'}">${sel===correct?'✓ Correct!':'✗ Wrong — correct: '+esc(correct)}</div>`
+    : '';
+  const nav = sel ? `
+    <div class="controls">
+      <button class="btn" id="nextBtn">${S.current+1<S.questions.length?'Next Question →':'See Results'}</button>
+      <button class="btn-ghost" id="endBtn">End Quiz</button>
+    </div>` : '';
+  return `
+    <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+    <div class="q-meta"><span>Q ${S.current+1} / ${S.questions.length}</span><span>${Math.round(pct)}% done</span></div>
+    <div class="q-text">${esc(q.question)}</div>
+    ${opts}${fb}${nav}`;
+}
+
+function renderResult() {
+  const total = S.questions.length;
+  const correct = S.answers.filter(a => a.isCorrect).length;
+  const att = S.answers.length;
+  const pct = att ? Math.round((correct/att)*100) : 0;
+  const msg = pct>=80?'🎉 Excellent!':pct>=50?'👍 Good effort — keep revising!':'📚 More practice needed!';
+  const items = S.answers.slice(-60).map((a,i)=>{
+    const idx = S.answers.length>60 ? S.answers.length-60+i : i;
+    const q = S.questions[idx]; if(!q) return '';
+    const qt = (q.question||'').substring(0,110);
+    return `<div class="review-item ${a.isCorrect?'ok':'no'}">
+      <div class="ri-q">${idx+1}. ${esc(qt)}${(q.question||'').length>110?'…':''}</div>
+      <div class="ri-a">You: ${esc(a.chosen)} &nbsp;|&nbsp; Answer: ${esc(a.correct)} &nbsp;${a.isCorrect?'✓':'✗'}</div>
+    </div>`;
+  }).join('');
+  return `
+    <div class="result-center">
+      <div class="score-big">${pct}%</div>
+      <div class="score-label">Final Score</div>
+      <div class="stats">
+        <div><div class="stat-val" style="color:var(--correct)">${correct}</div><div class="stat-lbl">Correct</div></div>
+        <div><div class="stat-val" style="color:var(--wrong)">${att-correct}</div><div class="stat-lbl">Wrong</div></div>
+        <div><div class="stat-val" style="color:var(--accent)">${att}</div><div class="stat-lbl">Attempted</div></div>
+      </div>
+      <div class="result-msg">${msg}</div>
+      <button class="btn" id="restartBtn" style="max-width:300px;margin:0 auto">Try Another PDF</button>
+    </div>
+    <hr class="divider"/>
+    <div style="font-family:'Source Code Pro',monospace;font-size:11px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin-bottom:12px">
+      Review${S.answers.length>60?' (last 60)':''}
+    </div>
+    <div class="review-list">${items}</div>`;
+}
+
+// ── Events ──────────────────────────────────────────────────
+function bindEvents() {
+  if (S.phase === 'upload') {
+    const zone = document.getElementById('uploadZone');
+    const inp  = document.getElementById('fileInput');
+    zone.onclick = () => inp.click();
+    zone.ondragover = e => { e.preventDefault(); zone.classList.add('drag'); };
+    zone.ondragleave = () => zone.classList.remove('drag');
+    zone.ondrop = e => { e.preventDefault(); zone.classList.remove('drag'); handleFile(e.dataTransfer.files[0]); };
+    inp.onchange = e => handleFile(e.target.files[0]);
+  }
+  if (S.phase === 'quiz') {
+    document.querySelectorAll('.option').forEach(b => {
+      b.onclick = () => { if (S.selected) return; S.selected = b.dataset.letter; render(); };
+    });
+    document.getElementById('nextBtn')?.addEventListener('click', handleNext);
+    document.getElementById('endBtn')?.addEventListener('click', () => { S.phase='result'; render(); });
+  }
+  if (S.phase === 'result') {
+    document.getElementById('restartBtn')?.addEventListener('click', () => {
+      Object.assign(S,{phase:'upload',questions:[],current:0,selected:null,answers:[],error:'',chunkDone:0,chunkTotal:0,loadingMsg:''});
+      render();
+    });
+  }
+}
+
+// ── Core logic ───────────────────────────────────────────────
+async function handleFile(file) {
+  if (!file || file.type !== 'application/pdf') { S.error='Please upload a valid PDF file.'; render(); return; }
+  S.error=''; S.phase='loading'; S.questions=[]; S.chunkDone=0; S.chunkTotal=0;
+  S.loadingMsg='Reading PDF…'; render();
+
+  try {
+    const buf = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({data: buf}).promise;
+    const totalPages = pdf.numPages;
+
+    // Extract text from all pages
+    S.loadingMsg = `Extracting text from ${totalPages} pages…`; render();
+    const pageTexts = [];
+    for (let p = 1; p <= totalPages; p++) {
+      const page = await pdf.getPage(p);
+      const content = await page.getTextContent();
+      pageTexts.push(content.items.map(i=>i.str).join(' '));
+    }
+
+    // Build chunks
+    const chunks = [];
+    for (let i = 0; i < pageTexts.length; i += PAGES_PER_CHUNK) {
+      chunks.push({
+        text: pageTexts.slice(i, i+PAGES_PER_CHUNK).join('\n'),
+        start: i+1,
+        end: Math.min(i+PAGES_PER_CHUNK, totalPages)
+      });
+    }
+
+    S.chunkTotal = chunks.length;
+    S.loadingMsg = 'Extracting questions with AI…'; render();
+
+    // Process chunks sequentially (avoid rate limits)
+    for (let i = 0; i < chunks.length; i++) {
+      S.loadingMsg = `Processing pages ${chunks[i].start}–${chunks[i].end}…`;
+      render();
+      const qs = await extractFromChunk(chunks[i].text, chunks[i].start, chunks[i].end);
+      S.questions.push(...qs);
+      S.chunkDone = i+1;
+      render();
+      // Small delay between chunks to respect rate limits
+      if (i < chunks.length-1) await sleep(300);
+    }
+
+    if (S.questions.length === 0) throw new Error('No MCQ questions found. Make sure your PDF has questions with A/B/C/D options.');
+    Object.assign(S, {phase:'quiz', current:0, selected:null, answers:[]});
+  } catch(err) {
+    S.error = err.message || 'Something went wrong. Please try again.';
+    S.phase = 'upload';
+  }
+  render();
+}
+
+async function extractFromChunk(text, startPage, endPage) {
+  if (!text.trim() || text.trim().length < 20) return [];
+  const truncated = text.substring(0, 13000);
+  const prompt = `Extract ALL multiple choice questions from the text below (PDF pages ${startPage}-${endPage}).
+Return ONLY a raw JSON array. No markdown, no backticks, no explanation, nothing else.
+Format each item as: {"question":"full question text","options":["A. option","B. option","C. option","D. option"],"answer":"A"}
+- answer is just one letter: A, B, C, or D
+- If answer key is present, use it. Otherwise make your best guess.
+- If no MCQ questions exist in this text, return []
+
+TEXT:
+${truncated}`;
+
+  const resp = await fetch(GEMINI_URL, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      contents:[{parts:[{text:prompt}]}],
+      generationConfig:{temperature:0.1, maxOutputTokens:8192}
+    })
+  });
+
+  const data = await resp.json();
+  if (data.error) throw new Error(`Gemini error: ${data.error.message}`);
+
+  const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+  const clean = raw.replace(/```json|```/g,'').trim();
+  try {
+    const parsed = JSON.parse(clean);
+    return Array.isArray(parsed) ? parsed.filter(q => q.question && q.options) : [];
+  } catch {
+    const m = clean.match(/\[[\s\S]*\]/);
+    if (m) { try { return JSON.parse(m[0]).filter(q=>q.question&&q.options); } catch{} }
+    return [];
+  }
+}
+
+function handleNext() {
+  const q = S.questions[S.current];
+  const correct = (q.answer||'').trim().toUpperCase();
+  const chosen  = (S.selected||'').trim().toUpperCase();
+  S.answers.push({chosen, correct, isCorrect: chosen===correct});
+  if (S.current+1 < S.questions.length) { S.current++; S.selected=null; }
+  else S.phase='result';
+  render();
+}
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+render();
+</script>
+</body>
+</html>
