@@ -79,8 +79,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
-const GEMINI_KEY = 'AIzaSyD6FpvD0_oXSWtF5LjMVfyYHHNYr-SACfI';
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`;
+const CLAUDE_URL = 'https://api.anthropic.com/v1/messages';
 const PAGES_PER_CHUNK = 15; // 15 pages per API call = handles 1000+ questions fine
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -107,7 +106,7 @@ function renderUpload() {
       <span>supports 1000+ questions &bull; any layout</span>
       <input type="file" id="fileInput" accept=".pdf"/>
     </div>
-    <p class="hint">Gemini AI reads every page and extracts all questions</p>`;
+    <p class="hint">Claude AI reads every page and extracts all questions</p>`;
 }
 
 function renderLoading() {
@@ -283,19 +282,20 @@ Format each item as: {"question":"full question text","options":["A. option","B.
 TEXT:
 ${truncated}`;
 
-  const resp = await fetch(GEMINI_URL, {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
+  const resp = await fetch(CLAUDE_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      contents:[{parts:[{text:prompt}]}],
-      generationConfig:{temperature:0.1, maxOutputTokens:8192}
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 8192,
+      messages: [{ role: 'user', content: prompt }]
     })
   });
 
   const data = await resp.json();
-  if (data.error) throw new Error(`Gemini error: ${data.error.message}`);
+  if (data.error) throw new Error(`Claude error: ${data.error.message}`);
 
-  const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+  const raw = data.content?.[0]?.text || '[]';
   const clean = raw.replace(/```json|```/g,'').trim();
   try {
     const parsed = JSON.parse(clean);
